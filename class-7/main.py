@@ -142,7 +142,9 @@ def wikipedia_search(search_term: str, lang: str = "en"):
 chats = {}  # type: dict[str, Chat]
 
 def get_or_create_chat(user_name: str) -> Chat:
-    pass
+    if user_name not in chats.keys():
+        chats[user_name] = Chat()
+    return chats[user_name]
 
 @app.post("/ai/chat", tags=["AI"])
 def ai_chat(req: ChatRequest):
