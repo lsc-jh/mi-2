@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from typing import Literal
 import wikipedia
+from chatbot import Chat
 
 tags_metadata = [
     {
@@ -94,6 +95,9 @@ def caluclate_post(req: CalcReqeust):
 class AIOperation(BaseModel):
     text: str
 
+class ChatRequest(AIOperation):
+    user: str
+
 
 @app.post("/ai/summary", tags=["AI"])
 def ai_summary(req: AIOperation):
@@ -103,14 +107,28 @@ def ai_summary(req: AIOperation):
 @app.get("/ai/wikipedia/search", tags=["AI"])
 def wikipedia_search(search_term: str, lang: str = "en"):
     wikipedia.set_lang(lang)
-    results = wikipedia.search(search_term)
+    try:
+        results = wikipedia.search(search_term)
+    except wikipedia.exceptions.DisambiguationError as e:
+        results = e.options
     if len(results) == 0:
         return {
             "search_term": search_term,
             "result": "No results found"
         }
     if results[0] == search_term:
-        page = wikipedia.page(results[0])
+        try:
+            page = wikipedia.page(results[0])
+        except wikipedia.exceptions.DisambiguationError as e:
+            return {
+                "search_term": search_term,
+                "result": e.options
+            }
+        except wikipedia.exceptions.PageError as e:
+            return {
+                "search_term": search_term,
+                "result": "No results found"
+            }
         return {
             "search_term": search_term,
             "result": page.content
@@ -120,3 +138,13 @@ def wikipedia_search(search_term: str, lang: str = "en"):
         "search_term": search_term,
         "result": results
     }
+
+chats = {}  # type: dict[str, Chat]
+
+def get_or_create_chat(user_name: str) -> Chat:
+    pass
+
+@app.post("/ai/chat", tags=["AI"])
+def ai_chat(req: ChatRequest):
+    chat = get_or_create_chat(req.user)
+    return chat.respond(req.text)
