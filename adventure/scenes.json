@@ -1,0 +1,20 @@
+{
+  "start": {
+    "description": "You find yourself at the entrance of a dark cave. You hear strange noises coming from inside.",
+    "choices": {
+      "Enter the cave": "inside_cave",
+      "Run away": "run_away"
+    }
+  },
+  "inside_cave": {
+    "description": "Inside the cave, you see two paths: one glowing faintly and the other completely dark.",
+    "choices": {
+      "Take the glowing path": "glowing_path",
+      "Take the dark path": "dark_path"
+    }
+  },
+  "run_away": {
+    "description": "You run away safely, but miss the adventure. The End.",
+    "choices": {}
+  }
+}
