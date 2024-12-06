@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adventure Game</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f9;
+      }
+      .container {
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: #fff;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #output {
+        margin-top: 20px;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        text-align: left;
+        white-space: pre-wrap;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Adventure Game</h1>
+      <p id="welcome-message">Loading available routes...</p>
+      <div id="buttons"></div>
+      <div id="output"></div>
+    </div>
+    <script>
+      const SERVER_URL = "http://127.0.0.1:8000";
+      let username = "";
+
+      async function fetchRoutes() {
+        try {
+          const response = await fetch(`${SERVER_URL}/`);
+          const data = await response.json();
+
+          if (data.message) {
+            document.getElementById("welcome-message").innerText = data.message;
+          }
+
+          if (data.possible_routes) {
+            generateButtons(data.possible_routes);
+          }
+        } catch (error) {
+          console.error("Error fetching routes:", error);
+          document.getElementById("welcome-message").innerText =
+            "Failed to load routes. Check your server connection.";
+        }
+      }
+
+      function generateButtons(routes) {
+        const buttonsDiv = document.getElementById("buttons");
+        buttonsDiv.innerHTML = "";
+        username = prompt("Enter your username to begin:");
+
+        routes.forEach((route) => {
+          const [method, url, text] = route.split(";");
+          const button = document.createElement("button");
+          button.innerText = text;
+          button.onclick = () => handleRoute(method, url);
+          buttonsDiv.appendChild(button);
+        });
+      }
+
+      async function handleRoute(method, url) {
+        try {
+          const completeUrl = url.includes("?")
+            ? `${url}&user=${username}`
+            : `${url}?user=${username}`;
+
+          let response;
+          if (method === "GET") {
+            response = await fetch(completeUrl);
+          } else if (method === "POST") {
+            const choice = prompt("Enter your choice if needed:");
+            response = await fetch(completeUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user: username, choice }),
+            });
+          }
+
+          const data = await response.json();
+          displayOutput(data);
+        } catch (error) {
+          console.error("Error handling route:", error);
+          alert("Failed to process the request. Check the server connection.");
+        }
+      }
+
+      function displayOutput(data) {
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerText = JSON.stringify(data, null, 2);
+      }
+      fetchRoutes();
+    </script>
+  </body>
+</html>
+
