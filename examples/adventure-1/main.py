@@ -11,7 +11,7 @@ with open('scenes.json', 'r') as f:
     scenes = json.load(f)
 
 # TODO: Improve the description
-description = """The backend for an adventure game.
+description = """The backend for an adventure-1 game.
 
 ## Story
 - ...
