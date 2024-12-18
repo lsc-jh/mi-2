@@ -1,7 +1,7 @@
 import json
 
 from fastapi import FastAPI, HTTPException
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
 SERVER_URL = "http://localhost:8000"
@@ -47,9 +47,10 @@ def start(user: str):
     if user in user_states:
         return {
             "message": f"Welcome back {user}!",
-            "scene": scenes[user]
+            "scene": scenes[user_states[user]],
         }
     else:
+        user_states[user] = "start"
         return {
             "message": f"Welcome {user}!",
             "scene": scenes["start"]
@@ -62,7 +63,7 @@ def save(user: str):
         raise HTTPException(status_code=404, detail=f"Game not started for {user}!")
     return {
         "message": f"Game saved for {user}!",
-        "current_scene": scenes[user]
+        "current_scene": scenes[user_states[user]]
     }
 
 class GameChoice(BaseModel):
@@ -73,3 +74,22 @@ class GameChoice(BaseModel):
 def continue_game(resp: GameChoice):
     user = resp.user
     choice = resp.choice
+
+    if user not in user_states:
+        raise HTTPException(status_code=404, detail=f"Game not started for {user}")
+
+    current_scene = scenes[user_states[user]]
+
+    if choice not in current_scene["choices"]:
+        error = {
+            "message": f"Choice {choice} is not valid!",
+            "possible_choices": current_scene["choices"]
+        }
+        raise HTTPException(status_code=404, detail=error)
+
+    user_states[user] = choice
+
+    return {
+        "message": "Success",
+        "scene": scenes[choice]
+    }
