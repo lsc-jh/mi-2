@@ -7,6 +7,31 @@ import _thread
 from time import sleep
 from jsonservice import JsonService
 import requests
+import json
+
+
+def get_prompt(scene: str, choices: list[str], context: str = "", choice: str = None) -> str:
+    base = f"""
+    You are building an adventure game. The player is currently at: {scene}.
+"""
+    if context:
+        base += f"""
+        Context for the scene: {context}
+"""
+    base += f"""
+    Provide the next scene's description and two choices and a name for the scene in JSON format!
+
+    Then name of the scene should follow the python variable naming convention (snake_case).
+"""
+    if choices:
+        base += f"""
+    The player can choose between: {choices[0]} and {choices[1]}.
+"""
+    if choice:
+        base += f"""
+        The player chose: {choice}.
+    """
+    return base
 
 class User:
     def __init__(self, username: str, current_scene: str = "start"):
