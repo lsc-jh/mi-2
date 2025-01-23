@@ -10,66 +10,74 @@ from jsonservice import JsonService
 import requests
 import json
 
+
 SERVER_URL = "http://localhost:8000"
 AI_URL = "https://lsc-ai.kou-gen.net/api/generate"
+PROMPT_URL = "https://lsc-ai.kou-gen.net/prompt/mi-2/v1/generate"
 service = JsonService('users.json')
 
 class User:
-    def __init__(self, username: str, current_scene: str = "start"):
+    def __init__(self, username: str, json_data=None):
         self.username = username
-        self.current_scene = current_scene
-        self.scene = {}
 
-    # TODO: Functions
+        if json_data:
+            self.current_scene = json_data["current_scene"]
+            self.scene = json.loads(json_data["scene"])
+        else:
+            self.current_scene = "start"
+            self.scene = {}
+
     def generate_next_scene(self, choice=None, model="llama3"):
         choices = list(self.scene.get("choices", {}).values())
-        prompt = get_prompt(self.current_scene, choices, "", choice)
-        prompt += f"""
-    IMPORTANT: Don't include any other message then the JSON format.
-    Don't use: "Here's the next scene: <scene description>." or "Choose between: <choice1_text> and <choice2_text>."
-    Format:
-    {{
-      "description": "<scene description>",
-      "name": "<scene_name>",
-      "choices": {{
-        "choice1_key": "<choice1_text>",
-        "choice2_key": "<choice2_text>"
-      }}
-    }}
-    """
-        print(prompt)
+        body = {
+            "scene": self.current_scene,
+            "choices": choices,
+            "context": self.scene.get("description", ""),
+            "choice": choice
+        }
+        prompt_res = requests.post(PROMPT_URL, json=body)
+
+        if prompt_res.status_code == 200:
+            raw_json = prompt_res.json()
+            prompt = raw_json.get("prompt")
+        else:
+            print("Error:", prompt_res.text)
+            return None
+
 
         payload = {
             "model": model,
             "prompt": prompt,
             "stream": False
         }
-        response = requests.post(AI_URL, json=payload)
-        if response.status_code == 200:
-            self.scene = json.loads(response.json().get("response"))
-            self.current_scene = self.scene["name"]
-        else:
-            print("Error:", response.text)
-            return None
 
+        response = requests.post(AI_URL, json=payload)
+
+        try:
+            if response.status_code == 200:
+                self.scene = json.loads(response.json().get("response"))
+                self.current_scene = self.scene["name"]
+
+                service.write(f"users.{self.username}", self.serialize())
+            else:
+                print("Error:", response.text)
+                return None
+        except:
+            print("Error:", response.text)
+            return
+
+    # NOTE: This method is for saving the user in JSON format
     def serialize(self):
-        return{
+        return {
             "current_scene": self.current_scene,
-            "scene": self.scene
+            "scene": json.dumps(self.scene)
         }
 
-
-def open_browser(*args) -> None:
+# NOTE: This method already exists in the main.py file
+def open_browser():
     sleep(2)
     if os.path.exists("game.html"):
         webbrowser.open_new("game.html")
-
-def get_user(username:str, _users: list[User]):
-    for user in _users:
-        if user.username == username:
-            return user
-    return None
-
 
 
 app = FastAPI()
@@ -82,24 +90,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-users = service.read("users") or []
-
 @app.get("/", tags=["Adventure"])
 def home():
     return {
         "message": "Hello Adventurer!",
     }
 
+
 @app.get("/start", tags=["Adventure"])
 def start(username: str):
-    user = get_user(username, users)
+    user = service.read(f"users.{username}")
+
     if not user:
         user = User(username)
-        users.append(user)
+        service.write(f"users.{username}", user.serialize())
+        user.generate_next_scene()
+    else:
+        user = User(username, user)
 
-    user.generate_next_scene()
     return user.scene
 
 
@@ -107,25 +115,31 @@ class GameChoice(BaseModel):
     username: str
     choice: str
 
-@app.post("/continue", tags=["Adveture"])
+
+@app.post("/continue", tags=["Adventure"])
 def continue_game(game_choice: GameChoice):
     username = game_choice.username
     choice = game_choice.choice
 
-    user= get_user(username, users)
+    user = service.read(f"users.{username}")
+
     if not user:
         return {"message": "User not found!"}
 
+    user = User(username, user)
+
     if not user.scene:
-        return {"message": "User has not started the game"}
+
+        return {"message": "User scene not found! Go to /start"}
 
     if choice not in user.scene["choices"]:
         return {"message": "Invalid choice!"}
 
     user.generate_next_scene(choice)
-    return  user.scene
+
+    return user.scene
 
 
 if __name__ == "__main__":
-    #_thread.start_new_thread(open_browser, ())
+    #_thread.start_new_thread(open_browser, ())  # Don't worry about this warning.
     uvicorn.run("main:app", reload=True)
