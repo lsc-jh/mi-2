@@ -1,12 +1,16 @@
 
 class Car:
-    pass
+    def __init__(self, model, wheel_count, wheel_pressure):
+        print(f"{model} is being built.")
+        self.model = model
+        self.wheel_count = wheel_count
+        self.wheel_pressure = wheel_pressure
 
 print("blueprint", Car)
 
-car = Car()
-print("car", car)
+car = Car("Mazda", 4, 2.4)
+print(car.model, car)
 
-toyota = Car()
-print("toyota", toyota)
+toyota = Car("Toyota", 4, 2.2)
+print(toyota.model, toyota)
 
