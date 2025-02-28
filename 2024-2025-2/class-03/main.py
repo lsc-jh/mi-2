@@ -24,7 +24,8 @@ def draw_colored_spiral():
         t.forward(i * 0.1)
         t.right(10)
 
+draw_colored_hexagonal_spiral()
+
 draw_colored_spiral()
-#draw_colored_hexagonal_spiral()
 
 done()
