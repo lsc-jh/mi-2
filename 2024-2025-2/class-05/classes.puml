@@ -1,0 +1,17 @@
+@startuml
+
+class Car {
+    + brand: str
+    + color: str
+    + __init__(brand, color)
+    + drive(): void
+}
+
+class ElectricCar {
+    + battery: str
+    + __init__(brand, color, battery)
+    + charge(): void
+}
+
+Car <|-- ElectricCar
+@enduml
