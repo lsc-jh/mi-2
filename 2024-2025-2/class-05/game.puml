@@ -1,0 +1,59 @@
+@startuml
+class Tile {
+    + symbol: str
+    + walkable: bool
+    + __init__(symbol, walkable)
+}
+
+class Wall {
+    + __init__()
+}
+
+class Empty {
+    + __init__()
+}
+
+class Treasure {
+    + collected: bool
+    + __init__()
+    + collect()
+}
+
+class Exit {
+    + __init__()
+}
+
+class Enemy {
+    + __init__()
+}
+
+class Player {
+    + __init__()
+}
+
+class Game {
+    + width: int
+    + height: int
+    + map: list[list[Tile]]
+    + player_pos: list[int, int]
+    + enemies: list[list[int, int]]
+    + treasure: tuple[int, int]
+    + exit_pos: tuple[int, int]
+    + __init__(width, height)
+    + init_map()
+    + move_player(dx, dy)
+    + move_enemies()
+    + check_victory(): str
+    + draw(stdscr)
+    + play(stdscr)
+}
+
+Tile <|-- Wall
+Tile <|-- Empty
+Tile <|-- Treasure
+Tile <|-- Exit
+Tile <|-- Enemy
+Tile <|-- Player
+
+Game "1" *-- "many" Tile : contains
+@enduml
