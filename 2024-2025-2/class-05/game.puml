@@ -23,6 +23,13 @@ class Exit {
     + __init__()
 }
 
+class Entity {
+    + __init__()
+
+}
+
+Tile <|-- Entity
+
 class Enemy {
     + __init__()
 }
@@ -52,8 +59,8 @@ Tile <|-- Wall
 Tile <|-- Empty
 Tile <|-- Treasure
 Tile <|-- Exit
-Tile <|-- Enemy
-Tile <|-- Player
+Entity <|-- Enemy
+Entity <|-- Player
 
 Game "1" *-- "many" Tile : contains
 @enduml
