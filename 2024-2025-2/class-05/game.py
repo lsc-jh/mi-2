@@ -3,15 +3,16 @@ import time
 import os
 from blessed import Terminal
 
-os.environ['TERM'] = 'xterm'
 
 class Pos:
+
     def __init__(self, x, y):
         self.x = x
         self.y = y
 
 
 class Tile:
+
     def __init__(self, symbol, walkable, pos: Pos):
         self.symbol = symbol
         self.walkable = walkable
@@ -19,21 +20,25 @@ class Tile:
 
 
 class Entity(Tile):
+
     def __init__(self, symbol, walkable, pos: Pos):
         super().__init__(symbol, walkable, pos)
 
 
 class Wall(Tile):
+
     def __init__(self, pos):
         super().__init__("#", False, pos)
 
 
 class Empty(Tile):
+
     def __init__(self, pos):
         super().__init__(" ", True, pos)
 
 
 class Treasure(Tile):
+
     def __init__(self, pos):
         super().__init__("T", True, pos)
         self.collected = False
@@ -44,21 +49,25 @@ class Treasure(Tile):
 
 
 class Exit(Tile):
+
     def __init__(self, pos):
         super().__init__("E", True, pos)
 
 
 class Player(Entity):
+
     def __init__(self, pos):
         super().__init__("P", True, pos)
 
 
 class Enemy(Entity):
+
     def __init__(self, pos):
         super().__init__("E", True, pos)
 
 
 class Game:
+
     def __init__(self, width, height):
         self.width = width
         self.height = height
@@ -67,10 +76,10 @@ class Game:
             tmp = []
             for j in range(width):
                 pos = Pos(j, i)
-                tmp.append(Empty(pos)) # !!!! CHANGED !!!!!
+                tmp.append(Empty(pos))  # !!!! CHANGED !!!!!
             self.map.append(tmp)
         # self.map = [[Empty() for _ in range(self.width)] for _ in range(self.height)]
-        
+
         self.enemies = []
         self.treasure = None
         self.exit_pos = Pos(width - 2, height - 2)
@@ -94,12 +103,14 @@ class Game:
             self.map[i][self.width - 1] = Wall(Pos(self.width - 1, i))
 
         for _ in range((self.width * self.height) // 6):
-            x, y = random.randint(1, self.width - 2), random.randint(1, self.height - 2)
+            x, y = random.randint(1, self.width - 2), random.randint(
+                1, self.height - 2)
             self.map[y][x] = Wall(Pos(x, y))
 
     def _place_treasure(self):
         while True:
-            x, y = random.randint(1, self.width - 2), random.randint(1, self.height - 2)
+            x, y = random.randint(1, self.width - 2), random.randint(
+                1, self.height - 2)
             if isinstance(self.map[y][x], Empty):
                 self.map[y][x] = Treasure(Pos(x, y))
                 self.treasure = (x, y)
@@ -108,7 +119,8 @@ class Game:
     def _place_enemies(self):
         for _ in range(3):
             while True:
-                x, y = random.randint(1, self.width - 2), random.randint(1, self.height - 2)
+                x, y = random.randint(1, self.width - 2), random.randint(
+                    1, self.height - 2)
                 if isinstance(self.map[y][x], Empty):
                     self.map[y][x] = Enemy(Pos(x, y))
                     self.enemies.append([x, y])
@@ -123,26 +135,26 @@ class Game:
         if isinstance(tile, Treasure):
             tile.collect()
         if tile.walkable:
-            self.map[self.player.pos.y][self.player.pos.x] = Empty(self.player.pos)
+            self.map[self.player.pos.y][self.player.pos.x] = Empty(
+                self.player.pos)
             self.player.pos = Pos(x, y)
 
     def _check_victory(self):
         pass
 
     def _draw(self, term: Terminal):
-        term.clear()
+        print(term.clear)
 
+        prints = []
         for y in range(self.height):
             for x in range(self.width):
-                term.move(y, x * 2)
-                term.addstr(self.map[y][x].symbol)
+                prints.append(term.move_xy(x * 2, y) + self.map[y][x].symbol)
         px, py = self.player.pos.x, self.player.pos.y
-        term.move(py, px * 2)
-        term.addstr(self.player.symbol)
+        prints.append(term.move_xy(px * 2, py) + self.player.symbol)
+        for p in prints:
+            print(p, end="", flush=True)
 
     def play(self, term: Terminal):
-        term.hidden_cursor()
-
         while True:
             self._draw(term)
             with term.cbreak(), term.hidden_cursor():
@@ -163,7 +175,6 @@ def main():
     game = Game(20, 20)
     term = Terminal()
     game.play(term)
-
 
 
 if __name__ == '__main__':
