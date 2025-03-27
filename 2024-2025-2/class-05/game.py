@@ -1,6 +1,4 @@
 import random
-import time
-import os
 from blessed import Terminal
 
 
@@ -13,34 +11,45 @@ class Pos:
 
 class Tile:
 
-    def __init__(self, symbol, walkable, pos: Pos):
+    def __init__(self, symbol: str, walkable: bool, pos: Pos, term: Terminal):
+        self.term = term
         self.symbol = symbol
         self.walkable = walkable
         self.pos = pos
 
+    def __str__(self):
+        return self.term.move_xy(self.pos.x, self.pos.y) + self.symbol
+
 
 class Entity(Tile):
 
-    def __init__(self, symbol, walkable, pos: Pos):
-        super().__init__(symbol, walkable, pos)
+    def __init__(self, symbol: str, walkable: bool, pos: Pos, term: Terminal):
+        super().__init__(symbol, walkable, pos, term)
+
+    def move(self, dx, dy, board: list[list[Tile]]):
+        x, y = self.pos.x + dx, self.pos.y + dy
+        tile = board[y][x]
+        if tile.walkable:
+            board[self.pos.y][self.pos.x] = Empty(self.pos)
+            self.pos = Pos(x, y)
 
 
 class Wall(Tile):
 
-    def __init__(self, pos):
-        super().__init__("#", False, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__("#", False, pos, term)
 
 
 class Empty(Tile):
 
-    def __init__(self, pos):
-        super().__init__(" ", True, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__(" ", True, pos, term)
 
 
 class Treasure(Tile):
 
-    def __init__(self, pos):
-        super().__init__("T", True, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__("T", True, pos, term)
         self.collected = False
 
     def collect(self):
@@ -50,20 +59,20 @@ class Treasure(Tile):
 
 class Exit(Tile):
 
-    def __init__(self, pos):
-        super().__init__("E", True, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__("E", True, pos, term)
 
 
 class Player(Entity):
 
-    def __init__(self, pos):
-        super().__init__("P", True, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__("P", True, pos, term)
 
 
 class Enemy(Entity):
 
-    def __init__(self, pos):
-        super().__init__("E", True, pos)
+    def __init__(self, pos, term: Terminal):
+        super().__init__("E", True, pos, term)
 
 
 class Game:
@@ -143,8 +152,6 @@ class Game:
         pass
 
     def _draw(self, term: Terminal):
-        print(term.clear)
-
         prints = []
         for y in range(self.height):
             for x in range(self.width):
@@ -155,20 +162,21 @@ class Game:
             print(p, end="", flush=True)
 
     def play(self, term: Terminal):
-        while True:
-            self._draw(term)
-            with term.cbreak(), term.hidden_cursor():
+        print(term.clear, end="", flush=True)
+        with term.cbreak(), term.hidden_cursor():
+            while True:
+                self._draw(term)
                 inp = term.inkey()
-            if inp == "w":
-                self._move_player(0, -1)
-            elif inp == "s":
-                self._move_player(0, 1)
-            elif inp == "a":
-                self._move_player(-1, 0)
-            elif inp == "d":
-                self._move_player(1, 0)
-            elif inp == "q":
-                break
+                if inp == "w":
+                    self._move_player(0, -1)
+                elif inp == "s":
+                    self._move_player(0, 1)
+                elif inp == "a":
+                    self._move_player(-1, 0)
+                elif inp == "d":
+                    self._move_player(1, 0)
+                elif inp == "q":
+                    break
 
 
 def main():
