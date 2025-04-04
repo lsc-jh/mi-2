@@ -150,13 +150,36 @@ class Player(Entity):
         if tile.walkable:
             board[self.pos.y][self.pos.x] = Empty(self.pos, self.term)
             self.pos = Pos(x, y)
+            board[y][x] = self
             if isinstance(tile, Treasure):
                 tile.collect()
+            
+            if isinstance(tile, Exit):
+                print(self.term.move_xy(0, 0) + self.term.green("You win!"))
+                exit(0)
+
+            if isinstance(tile, Enemy):
+                print(self.term.move_xy(0, 0) + self.term.red("Game Over!"))
+                exit(0)
 
 class Enemy(Entity):
 
     def __init__(self, pos, term: Terminal):
-        super().__init__("EE", True, pos, term)
+        super().__init__(BLOCK*2, True, pos, term)
+
+    def _render(self, color=None, custom_symbol=None):
+        return super()._render(color=self.term.indianred1)
+
+    def move(self, dx, dy, board):
+        x, y = self.pos.x + dx, self.pos.y + dy
+        tile = board[y][x]
+        if tile.walkable:
+            board[self.pos.y][self.pos.x] = Empty(self.pos, self.term)
+            self.pos = Pos(x, y)
+            board[y][x] = self
+            if isinstance(tile, Player):
+                print(self.term.move_xy(0, 0) + self.term.red("Game Over!"))
+                exit(0)
 
 
 class Game:
@@ -172,12 +195,19 @@ class Game:
         self.enemies = []
         self.treasure = None
         self.exit = Exit(Pos(width - 2, height - 2), self.term)
+        self.map[self.exit.pos.y][self.exit.pos.x] = self.exit
         self.player = Player(Pos(1, 1), self.term)
         self._init_map()
 
     def _init_map(self):
         self._place_walls()
         self._place_treasure()
+        self._place_enemies()
+
+    def _place_enemies(self):
+        for _ in range(10):
+            enemy = self.place_random_tile(Enemy)
+            self.enemies.append(enemy)
 
     def _place_walls(self):
         for i in range(self.width):
@@ -193,27 +223,38 @@ class Game:
                 1, self.height - 2)
             self.map[y][x] = Wall(Pos(x, y), self.term, (self.width, self.height))
 
-    def _place_treasure(self):
+    def place_random_tile(self, tile_class):
         placed = False
         while not placed:
             x, y = random.randint(1, self.width - 2), random.randint(1, self.height - 2)
             tile = self.map[y][x]
             if not isinstance(tile, Empty):
                 continue
-            self.treasure = Treasure(Pos(x, y), self.term)
-            self.map[y][x] = self.treasure
+            tile = tile_class(Pos(x, y), self.term)
+            self.map[y][x] = tile
             placed = True
+        return tile
+
+    def _place_treasure(self):
+        self.treasure = self.place_random_tile(Treasure)
+
+    def move_enemies(self):
+        for enemy in self.enemies:
+            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+            enemy.move(dx, dy, self.map)
 
     def _draw(self):
         if self.treasure:
             print(self.treasure)
+        for enemy in self.enemies:
+            print(enemy)
         print(self.player)
 
     def play(self):
         with self.term.cbreak(), self.term.hidden_cursor():
             while True:
                 self._draw()
-                inp = self.term.inkey()
+                inp = self.term.inkey(timeout=0.25)
                 if inp == "q":
                     break
                 elif inp in ["w", "W"]:
@@ -225,9 +266,11 @@ class Game:
                 elif inp in ["d", "D"]:
                     self.player.move(1, 0, self.map)
 
+                self.move_enemies()
+
 def main():
     term = Terminal()
-    game = Game(20, 20, term)
+    game = Game(40, 40, term)
     game.play()
 
 
