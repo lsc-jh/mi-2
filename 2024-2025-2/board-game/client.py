@@ -110,31 +110,21 @@ class Exit(Tile):
         super().__init__("XX", True, pos, term)
 
 
-class Player(Entity):
-
-    def __init__(self, pos, term: Terminal):
-        super().__init__(BLOCK*2, True, pos, term)
+class Player(Tile):
+    def __init__(self, pos, term: Terminal, is_self=False):
+        self.is_self = is_self
+        super().__init__(BLOCK * 2, True, pos, term)
 
     def __str__(self):
-        return self._render(color=self.term.cyan2)
+        color = self.term.cyan2 if self.is_self else self.term.orange4
+        return self._render(color=color)
 
-    def move(self, dx, dy, board: list[list[Tile]]):
-        x, y = self.pos.x + dx, self.pos.y + dy
-        tile = board[y][x]
+    async def move(self, dx, dy, map: List[List[Tile]], ws: websockets.ClientConnection):
+        new_x, new_y = self.pos.x + dx, self.pos.y + dy
+        tile = map[new_y][new_x]
         if tile.walkable:
-            board[self.pos.y][self.pos.x] = Empty(self.pos, self.term)
-            self.pos = Pos(x, y)
-            board[y][x] = self
-            if isinstance(tile, Treasure):
-                tile.collect()
-            
-            if isinstance(tile, Exit):
-                print(self.term.move_xy(0, 0) + self.term.green("You win!"))
-                exit(0)
+            await ws.send(json.dumps({"type": "move", "dir": "up" if dy < 0 else "down" if dy > 0 else "left" if dx < 0 else "right"}))
 
-            if isinstance(tile, Enemy):
-                print(self.term.move_xy(0, 0) + self.term.red("Game Over!"))
-                exit(0)
 
 class Enemy(Entity):
 
@@ -164,27 +154,33 @@ class Game:
         self.map = []  # type: list[list[Tile]]
         print(self.term.home + self.term.clear, end="", flush=True)
         self.players: Dict[str, Player] = {}
-        self.enemies: List[Enemy] = []
+        self.enemies: Dict[str, Enemy] = {}
+
         self.treasure: Treasure | None = None
         self.exit: Exit | None = None
         self.map_size = (0, 0)
         self.id: str | None = None
+        self.player: Player | None = None
 
     async def connect(self):
         async with websockets.connect(self.uri) as socket:
             print("Connected to server")
-            
-    
-    
+            await self.main_loop(socket)
+
     async def main_loop(self, socket):
         with self.term.cbreak(), self.term.hidden_cursor():
             while True:
-                message = await socket.recv()
-                data = json.loads(message)
-                print(data)
+                try:
+                    message = await asyncio.wait_for(socket.recv(), timeout=0.05)
+                    data = json.loads(message)
 
-                if data["type"] == "init":
-                    self.handle_init(data)
+                    if data["type"] == "init":
+                         self.handle_init(data)
+
+                    if data["type"] == "state":
+                        self.handle_state(data)
+                except asyncio.TimeoutError:
+                    pass
 
     def handle_init(self, data):
         width = data["width"]
@@ -192,78 +188,34 @@ class Game:
         self.map_size = (width, height)
         self.map = [[Empty(Pos(j, i), self.term) for j in range(width)] for i in range(height)]
         for wall in data["walls"]:
-            x, y = wall
+            x, y = wall["x"], wall["y"]
             self.map[y][x] = Wall(Pos(x, y), self.term, self.map_size)
 
+    def handle_state(self, data):
+        self.id = data.get("you")
+        for pid, pos in data["players"].items():
+            if pid in self.players:
+                player = self.players[pid]
+                self.map[player.pos.y][player.pos.x] = Empty(player.pos, self.term)
+                player.pos.x = pos["x"]
+                player.pos.y = pos["y"]
+                print(player, end="", flush=True)
+            else:
+                player = Player(Pos(pos["x"], pos["y"]), self.term, is_self=(pid == self.id))
+                self.players[pid] = player
+                self.map[pos["y"]][pos["x"]] = player
 
-    def _init_map(self):
-        self._place_walls()
-        self._place_treasure()
-        self._place_enemies()
-
-    def _place_enemies(self):
-        for _ in range(10):
-            enemy = self.place_random_tile(Enemy)
-            self.enemies.append(enemy)
-
-    def _place_walls(self):
-        for i in range(self.width):
-            self.map[0][i] = Wall(Pos(i, 0), self.term, (self.width, self.height))
-            self.map[self.height - 1][i] = Wall(Pos(i, self.height - 1), self.term, (self.width, self.height))
-
-        for i in range(1, self.height - 1):
-            self.map[i][0] = Wall(Pos(0, i), self.term, (self.width, self.height))
-            self.map[i][self.width - 1] = Wall(Pos(self.width - 1, i), self.term, (self.width, self.height))
-
-        for _ in range((self.width * self.height) // 6):
-            x, y = random.randint(1, self.width - 2), random.randint(
-                1, self.height - 2)
-            self.map[y][x] = Wall(Pos(x, y), self.term, (self.width, self.height))
-
-    def place_random_tile(self, tile_class):
-        placed = False
-        while not placed:
-            x, y = random.randint(1, self.width - 2), random.randint(1, self.height - 2)
-            tile = self.map[y][x]
-            if not isinstance(tile, Empty):
-                continue
-            tile = tile_class(Pos(x, y), self.term)
-            self.map[y][x] = tile
-            placed = True
-        return tile
-
-    def _place_treasure(self):
-        self.treasure = self.place_random_tile(Treasure)
-
-    def move_enemies(self):
-        for enemy in self.enemies:
-            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-            enemy.move(dx, dy, self.map)
-
-    def _draw(self):
-        if self.treasure:
-            print(self.treasure)
-        for enemy in self.enemies:
-            print(enemy)
-        print(self.player)
-
-    def play(self):
-        with self.term.cbreak(), self.term.hidden_cursor():
-            while True:
-                self._draw()
-                inp = self.term.inkey(timeout=0.25)
-                if inp == "q":
-                    break
-                elif inp in ["w", "W"]:
-                    self.player.move(0, -1, self.map)
-                elif inp in ["s", "S"]:
-                    self.player.move(0, 1, self.map)
-                elif inp in ["a", "A"]:
-                    self.player.move(-1, 0, self.map)
-                elif inp in ["d", "D"]:
-                    self.player.move(1, 0, self.map)
-
-                self.move_enemies()
+        for eid, pos in data["enemies"].items():
+            if eid in self.enemies:
+                enemy = self.enemies[eid]
+                self.map[enemy.pos.y][enemy.pos.x] = Empty(enemy.pos, self.term)
+                enemy.pos.x = pos["x"]
+                enemy.pos.y = pos["y"]
+                print(enemy, end="", flush=True)
+            else:
+                enemy = Enemy(Pos(pos["x"], pos["y"]), self.term)
+                self.enemies[eid] = enemy
+                self.map[pos["y"]][pos["x"]] = enemy
 
 
 if __name__ == '__main__':
