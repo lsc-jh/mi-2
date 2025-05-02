@@ -173,6 +173,8 @@ class Game:
     async def connect(self):
         async with websockets.connect(self.uri) as socket:
             print("Connected to server")
+            
+    
     
     async def main_loop(self, socket):
         with self.term.cbreak(), self.term.hidden_cursor():
@@ -180,6 +182,19 @@ class Game:
                 message = await socket.recv()
                 data = json.loads(message)
                 print(data)
+
+                if data["type"] == "init":
+                    self.handle_init(data)
+
+    def handle_init(self, data):
+        width = data["width"]
+        height = data["height"]
+        self.map_size = (width, height)
+        self.map = [[Empty(Pos(j, i), self.term) for j in range(width)] for i in range(height)]
+        for wall in data["walls"]:
+            x, y = wall
+            self.map[y][x] = Wall(Pos(x, y), self.term, self.map_size)
+
 
     def _init_map(self):
         self._place_walls()
@@ -250,14 +265,10 @@ class Game:
 
                 self.move_enemies()
 
-def main():
-    term = Terminal()
-    game = Game(20, 20, term)
-    game.play()
-
 
 if __name__ == '__main__':
     try:
-        main()
+        client = Game("ws://game-lsc.kou-gen.net")
+        asyncio.run(client.connect())
     except KeyboardInterrupt:
         print("Goodbye!")
