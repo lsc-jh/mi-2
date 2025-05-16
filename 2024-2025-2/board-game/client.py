@@ -4,6 +4,7 @@ from typing import Dict, List
 from blessed import Terminal
 import asyncio
 import websockets
+import sys
 
 HORIZONTAL_WALL = "══"
 TOP_LEFT_CORNER = "╔═"
@@ -182,6 +183,22 @@ class Game:
                 except asyncio.TimeoutError:
                     pass
 
+                key = self.term.inkey(timeout=0.01)
+                if key.lower() == "q":
+                    await socket.close()
+                    sys.exit(0)
+
+                key = key.lower()
+                if key and self.player:
+                    if key == "w":
+                        await self.player.move(0, -1, self.map, socket)
+                    if key == "s":
+                        await self.player.move(0, 1, self.map, socket)
+                    if key == "a":
+                        await self.player.move(-1, 0, self.map, socket)
+                    if key == "d":
+                        await self.player.move(1, 0, self.map, socket)
+
     def handle_init(self, data):
         width = data["width"]
         height = data["height"]
@@ -193,6 +210,9 @@ class Game:
 
     def handle_state(self, data):
         self.id = data.get("you")
+        if not self.id:
+            return
+
         for pid, pos in data["players"].items():
             if pid in self.players:
                 player = self.players[pid]
@@ -204,6 +224,8 @@ class Game:
                 player = Player(Pos(pos["x"], pos["y"]), self.term, is_self=(pid == self.id))
                 self.players[pid] = player
                 self.map[pos["y"]][pos["x"]] = player
+
+        self.player = self.players.get(self.id)
 
         for eid, pos in data["enemies"].items():
             if eid in self.enemies:
