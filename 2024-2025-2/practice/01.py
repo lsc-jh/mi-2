@@ -36,19 +36,20 @@ def shape1():
         turtle_actor.forward(100)
         turtle_actor.left(120)
     turtle_actor.end_fill()
-    turtle.exitonclick()
+    #turtle.exitonclick()
 
 def shape2():
-    color_list = ['red', 'yellow', 'blue', 'green', 'pink', 'orange']
-    for i in range(3, 9):
-        turtle_actor.color(color_list[8-i])
-        turtle_actor.fillcolor(color_list[8-i])
+    # reset turtle
+    color_list = ['red', 'yellow', 'blue', 'green', 'pink', 'orange', 'purple', 'brown']
+    for i in range(3, 11):
+        turtle_actor.color(color_list[10-i])
+        turtle_actor.fillcolor(color_list[10-i])
         turtle_actor.begin_fill()
-        for j in range(11-i):
+        for j in range(13-i):
             turtle_actor.forward(60)
-            turtle_actor.left(360/(11-i))
+            turtle_actor.left(360/(13-i))
         turtle_actor.end_fill()
-    turtle.exitonclick()
+    #turtle.exitonclick()
 
 def shape3():
     for i in range(4):
@@ -91,11 +92,11 @@ def shape3():
         turtle_actor.penup()
         turtle_actor.forward(40)
 
-    turtle.exitonclick()
+    #turtle.exitonclick()
 
-shape1()
+#shape1()
 shape2()
-shape3()
+#shape3()
 
 my_number = int(input("Give me a number: "))
 prime_divisors = []
