@@ -1,3 +1,5 @@
+import math
+
 import pygame
 import os
 from collections import deque
@@ -52,7 +54,7 @@ def extract_path(grid):
         r, c = q.popleft()
         x = c * TILE_SIZE + TILE_SIZE // 2
         y = r * TILE_SIZE + TILE_SIZE // 2
-        path.append((r, c))
+        path.append((x, y))
 
         for dir_r, dir_c in directions:
             new_r, new_c = r + dir_r, c + dir_c
@@ -63,16 +65,52 @@ def extract_path(grid):
 
     return path
 
+class Enemy:
+    def __init__(self, path, speed=2):
+        self.path = path
+        self.speed = speed
+        self.pos = list(path[0])
+        self.current_target = 1
+        self.reached_end = False
+
+    def update(self):
+        if self.reached_end or self.current_target >= len(self.path):
+            self.reached_end = True
+            return
+
+        target = self.path[self.current_target]
+        dx = target[0] - self.pos[0]
+        dy = target[1] - self.pos[1]
+        dist = math.hypot(dx, dy)
+
+        if dist < self.speed:
+            self.pos = list(target)
+            self.current_target += 1
+        else:
+            self.pos[0] += dx / dist * self.speed
+            self.pos[1] += dy / dist * self.speed
+
+    def draw(self, screen):
+        pygame.draw.circle(
+            screen,
+            (255, 0, 0),
+            (self.pos[0], self.pos[1]),
+            10
+        )
 
 
 def main():
     grid = load_map(get_abs_path('map.txt'))
+
     window_size = (TILE_SIZE * len(grid[0]), TILE_SIZE * len(grid))
 
     pygame.init()
     screen = pygame.display.set_mode(window_size)
     pygame.display.set_caption('Tower Defense Game')
     clock = pygame.time.Clock()
+
+    path = extract_path(grid)
+    enemy = Enemy(path)
 
     running = True
     while running:
@@ -82,6 +120,8 @@ def main():
 
         screen.fill((0, 0, 0))
         draw_map(screen, grid)
+        enemy.update()
+        enemy.draw(screen)
         pygame.display.flip()
 
         clock.tick(FPS)
