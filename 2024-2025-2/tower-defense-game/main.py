@@ -3,6 +3,7 @@ import pygame
 import os
 from collections import deque
 from enemy_spawner import EnemySpawner
+from tower import Tower
 
 GROUND_TYPE = "0"
 PATH_TYPE = "1"
@@ -81,6 +82,11 @@ def main():
 
     path = extract_path(grid)
     spawner = EnemySpawner(path)
+    center = TILE_SIZE // 2
+    towers = [
+        Tower(4 * TILE_SIZE + center, 2 * TILE_SIZE + center),
+        Tower(6 * TILE_SIZE + center, 5 * TILE_SIZE + center),
+    ]
 
     running = True
     while running:
@@ -92,8 +98,15 @@ def main():
 
         screen.fill((0, 0, 0))
         draw_map(screen, grid)
+
         spawner.update(dt)
+        for tower in towers:
+            tower.update(dt, spawner.enemies)
+
         spawner.draw(screen)
+        for tower in towers:
+            tower.draw(screen)
+
         pygame.display.flip()
 
     pygame.quit()
