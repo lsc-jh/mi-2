@@ -2,11 +2,12 @@ import pygame
 import math
 
 class Projectile:
-    def __init__(self, start_pos, target, speed=6):
+    def __init__(self, start_pos, target, speed=6, damage=25):
         self.pos = list(start_pos)
         self.target = target
         self.speed = speed
         self.hit = False
+        self.damage = damage
 
     def update(self):
         if self.target.reached_end:
@@ -20,7 +21,7 @@ class Projectile:
 
         if dist < self.speed:
             self.hit = True
-            self.target.reached_end = True
+            self.target.take_damage(self.damage)
         else:
             self.pos[0] += dx / dist * self.speed
             self.pos[1] += dy / dist * self.speed

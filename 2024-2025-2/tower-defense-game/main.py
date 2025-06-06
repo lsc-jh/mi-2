@@ -23,7 +23,7 @@ FPS = 60
 def draw_map(screen, grid):
     colors = {
         PATH_TYPE: (50, 50, 50),
-        GROUND_TYPE: (0, 105, 5)
+        GROUND_TYPE: (65, 217, 105)
     }
     for row in range(len(grid)):
         for col in range(len(grid[row])):
@@ -85,7 +85,7 @@ def main():
     center = TILE_SIZE // 2
     towers = [
         Tower(4 * TILE_SIZE + center, 2 * TILE_SIZE + center),
-        Tower(6 * TILE_SIZE + center, 5 * TILE_SIZE + center),
+        Tower(6 * TILE_SIZE + center, 6 * TILE_SIZE + center),
     ]
 
     running = True
