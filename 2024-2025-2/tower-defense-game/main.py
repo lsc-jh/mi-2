@@ -4,6 +4,10 @@ import pygame
 import os
 from collections import deque
 
+GROUND_TYPE = "0"
+PATH_TYPE = "1"
+ARCH_TOWER_TYPE = "2"
+
 def get_abs_path(filename):
     return os.path.abspath(os.path.join(os.path.dirname(__file__), filename))
 
@@ -17,8 +21,8 @@ FPS = 60
 
 def draw_map(screen, grid):
     colors = {
-        "P": (50, 50, 50),
-        "E": (0, 105, 5)
+        PATH_TYPE: (50, 50, 50),
+        GROUND_TYPE: (0, 105, 5)
     }
     for row in range(len(grid)):
         for col in range(len(grid[row])):
@@ -37,7 +41,7 @@ def extract_path(grid):
 
     start = None
     for row in range(rows):
-        if grid[row][0] == 'P':
+        if grid[row][0] == PATH_TYPE:
             start = (row, 0)
             break
         else:
@@ -59,44 +63,11 @@ def extract_path(grid):
         for dir_r, dir_c in directions:
             new_r, new_c = r + dir_r, c + dir_c
             if 0 <= new_r < rows and 0 <= new_c < cols and not visited[new_r][new_c]:
-                if grid[new_r][new_c] == "P":
+                if grid[new_r][new_c] == PATH_TYPE:
                     visited[new_r][new_c] = True
                     q.append((new_r, new_c))
 
     return path
-
-class Enemy:
-    def __init__(self, path, speed=2):
-        self.path = path
-        self.speed = speed
-        self.pos = list(path[0])
-        self.current_target = 1
-        self.reached_end = False
-
-    def update(self):
-        if self.reached_end or self.current_target >= len(self.path):
-            self.reached_end = True
-            return
-
-        target = self.path[self.current_target]
-        dx = target[0] - self.pos[0]
-        dy = target[1] - self.pos[1]
-        dist = math.hypot(dx, dy)
-
-        if dist < self.speed:
-            self.pos = list(target)
-            self.current_target += 1
-        else:
-            self.pos[0] += dx / dist * self.speed
-            self.pos[1] += dy / dist * self.speed
-
-    def draw(self, screen):
-        pygame.draw.circle(
-            screen,
-            (255, 0, 0),
-            (self.pos[0], self.pos[1]),
-            10
-        )
 
 
 class EnemySpawner:
