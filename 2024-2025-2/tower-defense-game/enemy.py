@@ -1,6 +1,8 @@
 import math
 import pygame
 
+# The enemy class
+
 class Enemy:
     def __init__(self, path, speed=2, max_hp=100):
         self.max_hp = max_hp
