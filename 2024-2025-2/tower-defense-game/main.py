@@ -70,9 +70,9 @@ def extract_path(grid):
 
     return path
 
-def draw_hud(screen, coins, lives, game_over, window_size):
+def draw_hud(screen, coins, lives, game_over, window_size, wave):
     font = pygame.font.SysFont(None, 24)
-    hud = f"Coins: {coins}    Lives: {lives}"
+    hud = f"Coins: {coins}    Lives: {lives}    Wave: {wave}"
     text = font.render(hud, True, (255, 255, 255))
     screen.blit(text, (10, 10))
 
@@ -100,6 +100,11 @@ def main():
     spawner = EnemySpawner(path)
     towers = []
 
+    wave = 1
+    spawner.start_wave(wave)
+    wave_cooldown = 2000
+    wave_timer = 0
+
     running = True
     while running:
         dt = clock.tick(FPS)
@@ -122,17 +127,23 @@ def main():
         screen.fill((0, 0, 0))
         draw_map(screen, grid)
         if not game_over:
-            killed, leaked = spawner.update(dt)
-            coins += killed * 10
-            lives -= leaked
-
-            if lives <= 0:
-                game_over = True
+            if spawner.wave_active:
+                killed, leaked = spawner.update(dt)
+                coins += killed * 10
+                lives -= leaked
+                if lives <= 0:
+                    game_over = True
+            else:
+                wave_timer += dt
+                if wave_timer >= wave_cooldown:
+                    wave += 1
+                    spawner.start_wave(wave)
+                    wave_timer = 0
 
             for tower in towers:
                 tower.update(dt, spawner.enemies)
 
-        draw_hud(screen, coins, lives, game_over, window_size)
+        draw_hud(screen, coins, lives, game_over, window_size, wave)
 
         spawner.draw(screen)
         for tower in towers:
