@@ -73,20 +73,25 @@ def extract_path(grid):
 def main():
     grid = load_map(get_abs_path('map.txt'))
 
-    window_size = (TILE_SIZE * len(grid[0]), TILE_SIZE * len(grid))
+    window_width = TILE_SIZE * len(grid[0])
+    window_height = TILE_SIZE * len(grid)
+    window_size = (window_width, window_height)
 
     pygame.init()
     screen = pygame.display.set_mode(window_size)
     pygame.display.set_caption('Tower Defense Game')
     clock = pygame.time.Clock()
 
+    coins = 100
+    lives = 10
+    game_over = False
+
+    tower_cost = 50
+
     path = extract_path(grid)
     spawner = EnemySpawner(path)
     center = TILE_SIZE // 2
-    towers = [
-        Tower(4 * TILE_SIZE + center, 2 * TILE_SIZE + center),
-        Tower(6 * TILE_SIZE + center, 6 * TILE_SIZE + center),
-    ]
+    towers = []
 
     running = True
     while running:
@@ -95,13 +100,41 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+                x, y = event.pos
+                col, row = x // TILE_SIZE, y // TILE_SIZE
+                tile = grid[row][col]
+
+                if tile == GROUND_TYPE and coins >= tower_cost:
+                    tx = col * TILE_SIZE + TILE_SIZE // 2
+                    ty = row * TILE_SIZE + TILE_SIZE // 2
+                    towers.append(Tower(tx, ty))
+                    coins -= tower_cost
+                    grid[row][col] = ARCH_TOWER_TYPE
 
         screen.fill((0, 0, 0))
         draw_map(screen, grid)
 
-        spawner.update(dt)
-        for tower in towers:
-            tower.update(dt, spawner.enemies)
+        if not game_over:
+            killed, leaked = spawner.update(dt)
+            coins += killed * 10
+            lives -= leaked
+
+            if lives <= 0:
+                game_over = True
+
+            for tower in towers:
+                tower.update(dt, spawner.enemies)
+
+        font = pygame.font.SysFont(None, 24)
+        hud = f"Coins: {coins}   Lives: {lives}"
+        text = font.render(hud, True, (255, 255, 255))
+        screen.blit(text, (10, 10))
+
+        if game_over:
+            over_font = pygame.font.SysFont(None, 64)
+            over_text = over_font.render("You Lost!", True, (255, 0, 0))
+            screen.blit(over_text, (window_width // 2 - 120, window_height // 2 - 32))
 
         spawner.draw(screen)
         for tower in towers:
