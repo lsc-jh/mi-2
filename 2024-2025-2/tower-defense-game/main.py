@@ -70,6 +70,17 @@ def extract_path(grid):
 
     return path
 
+def draw_hud(screen, coins, lives, game_over, window_size):
+    font = pygame.font.SysFont(None, 24)
+    hud = f"Coins: {coins}    Lives: {lives}"
+    text = font.render(hud, True, (255, 255, 255))
+    screen.blit(text, (10, 10))
+
+    if game_over:
+        over_font = pygame.font.SysFont(None, 64)
+        over_text = over_font.render("Game Over!", True, (255, 0, 0))
+        screen.blit(over_text, (window_size[0] // 2 - over_text.get_width(), window_size[1] // 2 - over_text.get_height()))
+
 def main():
     grid = load_map(get_abs_path('map.txt'))
 
@@ -80,13 +91,14 @@ def main():
     pygame.display.set_caption('Tower Defense Game')
     clock = pygame.time.Clock()
 
+    coins = 100
+    lives = 10
+    game_over = False
+    tower_cost = 50
+
     path = extract_path(grid)
     spawner = EnemySpawner(path)
-    center = TILE_SIZE // 2
-    towers = [
-        Tower(4 * TILE_SIZE + center, 2 * TILE_SIZE + center),
-        Tower(6 * TILE_SIZE + center, 6 * TILE_SIZE + center),
-    ]
+    towers = []
 
     running = True
     while running:
@@ -96,12 +108,31 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
+            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+                x, y = event.pos
+                col, row = x // TILE_SIZE, y // TILE_SIZE
+                tile = grid[row][col]
+                if tile == GROUND_TYPE and coins >= tower_cost:
+                    tx = col * TILE_SIZE + TILE_SIZE // 2
+                    ty = row * TILE_SIZE + TILE_SIZE // 2
+                    towers.append(Tower(tx, ty))
+                    coins -= tower_cost
+                    grid[row][col] = ARCH_TOWER_TYPE
+
         screen.fill((0, 0, 0))
         draw_map(screen, grid)
+        if not game_over:
+            killed, leaked = spawner.update(dt)
+            coins += killed * 10
+            lives -= leaked
 
-        spawner.update(dt)
-        for tower in towers:
-            tower.update(dt, spawner.enemies)
+            if lives <= 0:
+                game_over = True
+
+            for tower in towers:
+                tower.update(dt, spawner.enemies)
+
+        draw_hud(screen, coins, lives, game_over, window_size)
 
         spawner.draw(screen)
         for tower in towers:
